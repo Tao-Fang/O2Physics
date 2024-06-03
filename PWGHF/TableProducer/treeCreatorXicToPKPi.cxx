@@ -20,6 +20,9 @@
 #include "Framework/AnalysisTask.h"
 #include "Framework/runDataProcessing.h"
 
+#include "Common/DataModel/Centrality.h"
+#include "Common/DataModel/Multiplicity.h"
+
 #include "PWGHF/Core/HfHelper.h"
 #include "PWGHF/DataModel/CandidateReconstructionTables.h"
 #include "PWGHF/DataModel/CandidateSelectionTables.h"
@@ -78,6 +81,12 @@ DECLARE_SOA_COLUMN(OriginMcGen, originMcGen, int8_t);
 // Events
 DECLARE_SOA_COLUMN(IsEventReject, isEventReject, int);
 DECLARE_SOA_COLUMN(RunNumber, runNumber, int);
+DECLARE_SOA_COLUMN(CentFT0A, centFT0A, float);
+DECLARE_SOA_COLUMN(CentFT0C, centFT0C, float);
+DECLARE_SOA_COLUMN(CentFT0M, centFT0M, float);
+DECLARE_SOA_COLUMN(CentFV0A, centFV0A, float);
+DECLARE_SOA_COLUMN(CentFDDM, centFDDM, float);
+DECLARE_SOA_COLUMN(MultZeqNTracksPV, multZeqNTracksPV, float);
 } // namespace full
 
 DECLARE_SOA_TABLE(HfCandXicLites, "AOD", "HFCANDXICLITE",
@@ -193,7 +202,11 @@ DECLARE_SOA_TABLE(HfCandXicFullEvs, "AOD", "HFCANDXICFULLEV",
                   collision::PosY,
                   collision::PosZ,
                   full::IsEventReject,
-                  full::RunNumber);
+                  full::RunNumber,
+                  full::CentFT0A,
+                  full::CentFT0C,
+                  full::CentFT0M,
+                  full::CentFV0A);
 
 DECLARE_SOA_TABLE(HfCandXicFullPs, "AOD", "HFCANDXICFULLP",
                   full::Pt,
@@ -207,10 +220,10 @@ DECLARE_SOA_TABLE(HfCandXicFullPs, "AOD", "HFCANDXICFULLP",
 
 /// Writes the full information in an output TTree
 struct HfTreeCreatorXicToPKPi {
-  Produces<o2::aod::HfCandXicFulls> rowCandidateFull;
   Produces<o2::aod::HfCandXicFullEvs> rowCandidateFullEvents;
-  Produces<o2::aod::HfCandXicFullPs> rowCandidateFullParticles;
   Produces<o2::aod::HfCandXicLites> rowCandidateLite;
+  Produces<o2::aod::HfCandXicFulls> rowCandidateFull;
+  Produces<o2::aod::HfCandXicFullPs> rowCandidateFullParticles;
 
   Configurable<int> selectionFlagXic{"selectionFlagXic", 1, "Selection flag for Xic"};
   Configurable<bool> fillCandidateLiteTable{"fillCandidateLiteTable", false, "Switch to fill lite table with candidate properties"};
@@ -226,6 +239,7 @@ struct HfTreeCreatorXicToPKPi {
   using CandXicMcReco = soa::Filtered<soa::Join<aod::HfCand3Prong, aod::HfSelXicToPKPi, aod::HfCand3ProngMcRec>>;
   using CandXicMcGen = soa::Filtered<soa::Join<aod::McParticles, aod::HfCand3ProngMcGen>>;
   using TracksWPid = soa::Join<aod::Tracks, aod::TracksPidPi, aod::PidTpcTofFullPi, aod::TracksPidKa, aod::PidTpcTofFullKa, aod::TracksPidPr, aod::PidTpcTofFullPr>;
+  //using Cents = soa::Join<aod::CentFV0As, aod::CentFT0Ms, aod::CentFT0As, aod::CentFT0Cs, aod::CentFDDMs>;
 
   Filter filterSelectCandidates = aod::hf_sel_candidate_xic::isSelXicToPKPi >= selectionFlagXic || aod::hf_sel_candidate_xic::isSelXicToPiKP >= selectionFlagXic;
   Filter filterMcGenMatching = nabs(o2::aod::hf_cand_3prong::flagMcMatchGen) == static_cast<int8_t>(BIT(aod::hf_cand_3prong::DecayType::XicToPKPi));
@@ -248,6 +262,11 @@ struct HfTreeCreatorXicToPKPi {
       collision.posX(),
       collision.posY(),
       collision.posZ(),
+      collision.centFT0A(),
+      collision.centFT0C(),
+      collision.centFT0M(),
+      collision.centFV0A(),
+      collision.centFDDM(),
       isEventReject,
       runNumber);
   }
