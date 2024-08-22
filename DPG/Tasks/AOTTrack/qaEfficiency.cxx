@@ -107,6 +107,12 @@ std::array<std::shared_ptr<TH1>, nParticles> hPtTrkItsTpcMat;
 std::array<std::shared_ptr<TH1>, nParticles> hPtItsTpcTofMat;
 std::array<std::shared_ptr<TH1>, nParticles> hPtGeneratedMat;
 
+// Pt for tertiaries from secondary weak decay
+std::array<std::shared_ptr<TH1>, nParticles> hPtItsTpcTer;
+std::array<std::shared_ptr<TH1>, nParticles> hPtTrkItsTpcTer;
+std::array<std::shared_ptr<TH1>, nParticles> hPtItsTpcTofTer;
+std::array<std::shared_ptr<TH1>, nParticles> hPtGeneratedTer;
+
 // P
 std::array<std::shared_ptr<TH1>, nParticles> hPItsTpc;
 std::array<std::shared_ptr<TH1>, nParticles> hPTrkItsTpc;
@@ -147,6 +153,11 @@ std::array<std::shared_ptr<TH2>, nParticles> hPtEtaItsTpc;
 std::array<std::shared_ptr<TH2>, nParticles> hPtEtaTrkItsTpc;
 std::array<std::shared_ptr<TH2>, nParticles> hPtEtaItsTpcTof;
 std::array<std::shared_ptr<TH2>, nParticles> hPtEtaGenerated;
+// 2D  Pt vs Radius
+std::array<std::shared_ptr<TH2>, nParticles> hPtRadiusItsTpc;
+std::array<std::shared_ptr<TH2>, nParticles> hPtRadiusTrkItsTpc;
+std::array<std::shared_ptr<TH2>, nParticles> hPtRadiusItsTpcTof;
+std::array<std::shared_ptr<TH2>, nParticles> hPtRadiusGenerated;
 
 struct QaEfficiency {
   // Track/particle selection
@@ -187,9 +198,11 @@ struct QaEfficiency {
   ConfigurableAxis etaBins{"etaBins", {200, -3.f, 3.f}, "Eta binning"};
   ConfigurableAxis phiBins{"phiBins", {200, 0.f, 6.284f}, "Phi binning"};
   ConfigurableAxis yBins{"yBins", {200, -0.5f, 0.5f}, "Y binning"};
+  ConfigurableAxis radiusBins{"radiusBins", {200, 0.f, 100.f}, "Radius binning"};
   // Task configuration
   Configurable<bool> makeEff{"make-eff", false, "Flag to produce the efficiency with TEfficiency"};
   Configurable<bool> doPtEta{"doPtEta", false, "Flag to produce the efficiency vs pT and Eta"};
+  Configurable<bool> doPtRadius{"doPtRadius", false, "Flag to produce the efficiency vs pT and Radius"};
   Configurable<int> applyEvSel{"applyEvSel", 0, "Flag to apply event selection: 0 -> no event selection, 1 -> Run 2 event selection, 2 -> Run 3 event selection"};
   // Custom track cuts for debug purposes
   TrackSelection customTrackCuts;
@@ -262,6 +275,7 @@ struct QaEfficiency {
     const AxisSpec axisEta{etaBins, "#it{#eta}"};
     const AxisSpec axisY{yBins, "#it{y}"};
     const AxisSpec axisPhi{phiBins, "#it{#varphi} (rad)"};
+    const AxisSpec axisRadius{radiusBins, "Radius (cm)"};
 
     const char* partName = particleName(pdgSign, id);
     LOG(info) << "Preparing histograms for particle: " << partName << " pdgSign " << pdgSign;
@@ -294,7 +308,6 @@ struct QaEfficiency {
                                   partName,
                                   phiMin, phiMax,
                                   yMin, yMax);
-
     const int histogramIndex = id + pdgSign * nSpecies;
 
     // Pt
@@ -324,6 +337,12 @@ struct QaEfficiency {
     hPtTrkItsTpcStr[histogramIndex] = histos.add<TH1>(Form("MC/pdg%i/pt/str/trk/its_tpc", PDGs[histogramIndex]), "ITS-TPC tracks (reco from weak decays) " + tagPt, kTH1D, {axisPt});
     hPtItsTpcTofStr[histogramIndex] = histos.add<TH1>(Form("MC/pdg%i/pt/str/its_tpc_tof", PDGs[histogramIndex]), "ITS-TPC-TOF tracks (from weak decays) " + tagPt, kTH1D, {axisPt});
     hPtGeneratedStr[histogramIndex] = histos.add<TH1>(Form("MC/pdg%i/pt/str/generated", PDGs[histogramIndex]), "Generated (from weak decays) " + tagPt, kTH1D, {axisPt});
+
+    // Ter
+    hPtItsTpcTer[histogramIndex] = histos.add<TH1>(Form("MC/pdg%i/pt/ter/its_tpc", PDGs[histogramIndex]), "ITS-TPC tracks (from secondary weak decays) " + tagPt, kTH1D, {axisPt});
+    hPtTrkItsTpcTer[histogramIndex] = histos.add<TH1>(Form("MC/pdg%i/pt/ter/trk/its_tpc", PDGs[histogramIndex]), "ITS-TPC tracks (reco from secondary weak decays) " + tagPt, kTH1D, {axisPt});
+    hPtItsTpcTofTer[histogramIndex] = histos.add<TH1>(Form("MC/pdg%i/pt/ter/its_tpc_tof", PDGs[histogramIndex]), "ITS-TPC-TOF tracks (from secondary weak decays) " + tagPt, kTH1D, {axisPt});
+    hPtGeneratedTer[histogramIndex] = histos.add<TH1>(Form("MC/pdg%i/pt/ter/generated", PDGs[histogramIndex]), "Generated (from secondary weak decays) " + tagPt, kTH1D, {axisPt});
 
     // Mat
     hPtItsTpcMat[histogramIndex] = histos.add<TH1>(Form("MC/pdg%i/pt/mat/its_tpc", PDGs[histogramIndex]), "ITS-TPC tracks (from material)" + tagPt, kTH1D, {axisPt});
@@ -371,6 +390,12 @@ struct QaEfficiency {
       hPtEtaTrkItsTpc[histogramIndex] = histos.add<TH2>(Form("MC/pdg%i/pt/asd", PDGs[histogramIndex]), "ITS-TPC tracks (reco) " + tagPtEta, kTH2D, {axisPt, axisEta});
       hPtEtaItsTpcTof[histogramIndex] = histos.add<TH2>(Form("MC/pdg%i/pt/asd", PDGs[histogramIndex]), "ITS-TPC-TOF tracks " + tagPtEta, kTH2D, {axisPt, axisEta});
       hPtEtaGenerated[histogramIndex] = histos.add<TH2>(Form("MC/pdg%i/pt/asd", PDGs[histogramIndex]), "Generated " + tagPtEta, kTH2D, {axisPt, axisEta});
+    }
+
+    if (doPtRadius) {
+      hPtRadiusItsTpc[histogramIndex] = histos.add<TH2>(Form("MC/pdg%i/pt/radius/its_tpc", PDGs[histogramIndex]), "ITS-TPC tracks " + tagPt + " vs Radius", kTH2D, {axisPt, axisRadius});
+      hPtRadiusItsTpcTof[histogramIndex] = histos.add<TH2>(Form("MC/pdg%i/pt/radius/its_tpc_tof", PDGs[histogramIndex]), "ITS-TPC-TOF tracks " + tagPt + " vs Radius", kTH2D, {axisPt, axisRadius});
+      hPtRadiusGenerated[histogramIndex] = histos.add<TH2>(Form("MC/pdg%i/pt/radius/generated", PDGs[histogramIndex]), "Generated " + tagPt + " vs Radius", kTH2D, {axisPt, axisRadius});
     }
 
     LOG(info) << "Done with making histograms for particle: " << partName;
@@ -437,16 +462,18 @@ struct QaEfficiency {
     makeEfficiency("ITS-TPC_vsPt_Prm_Trk", hPtTrkItsTpcPrm[histogramIndex]);
     makeEfficiency("ITS-TPC-TOF_vsPt_Prm", hPtItsTpcTofPrm[histogramIndex]);
     makeEfficiency("ITS-TPC-TOF_vsPt_Prm_Trk", hPtTrkItsTpcTofPrm[histogramIndex]);
-
     makeEfficiency("ITS-TPC_vsPt_Prm_RecoEv", hPtItsTpcPrm[histogramIndex]);
 
     makeEfficiency("ITS-TPC_vsPt_Str", hPtItsTpcStr[histogramIndex]);
     makeEfficiency("ITS-TPC_vsPt_Str_Trk", hPtTrkItsTpcStr[histogramIndex]);
     makeEfficiency("ITS-TPC-TOF_vsPt_Str", hPtItsTpcTofStr[histogramIndex]);
-
     makeEfficiency("ITS-TPC_vsPt_Mat", hPtItsTpcMat[histogramIndex]);
     makeEfficiency("ITS-TPC_vsPt_Mat_Trk", hPtTrkItsTpcMat[histogramIndex]);
     makeEfficiency("ITS-TPC-TOF_vsPt_Mat", hPtItsTpcTofMat[histogramIndex]);
+
+    makeEfficiency("ITS-TPC_vsPt_Ter", hPtItsTpcTer[histogramIndex]);
+    makeEfficiency("ITS-TPC_vsPt_Ter_Trk", hPtTrkItsTpcTer[histogramIndex]);
+    makeEfficiency("ITS-TPC-TOF_vsPt_Ter", hPtItsTpcTofTer[histogramIndex]);
 
     makeEfficiency("ITS-TPC_vsP", hPItsTpc[histogramIndex]);
     makeEfficiency("ITS-TPC_vsP_Trk", hPTrkItsTpc[histogramIndex]);
@@ -484,6 +511,10 @@ struct QaEfficiency {
       makeEfficiency2D("ITS-TPC_vsPt_vsEta", hPtEtaItsTpc[histogramIndex]);
       makeEfficiency2D("ITS-TPC_vsPt_vsEta_Trk", hPtEtaTrkItsTpc[histogramIndex]);
       makeEfficiency2D("ITS-TPC-TOF_vsPt_vsEta", hPtEtaItsTpcTof[histogramIndex]);
+    }
+    if (doPtRadius) {
+      makeEfficiency2D("ITS-TPC_vsPt_vsRadius", hPtRadiusItsTpc[histogramIndex]);
+      makeEfficiency2D("ITS-TPC-TOF_vsPt_vsRadius", hPtRadiusItsTpcTof[histogramIndex]);
     }
 
     LOG(info) << "Done with making histograms for particle: " << partName << " for efficiencies";
@@ -909,7 +940,18 @@ struct QaEfficiency {
     }
     return mcParticle.isPhysicalPrimary();
   }
-
+  bool isFinal(const o2::aod::McParticles::iterator& mcParticle)
+  {
+    if (!mcParticle.has_daughters() && !mcParticle.isPhysicalPrimary() && mcParticle.getProcess() == 4) {
+      auto mothers = mcParticle.mothers_as<o2::aod::McParticles>();
+      for (const auto& mother : mothers) {
+        if (!mother.isPhysicalPrimary() && mother.getProcess() == 4) {
+          return true;
+        }
+      }
+    }
+    return false; // Otherwise, not considered a tertiary particle
+  }
   template <int pdgSign, o2::track::PID::ID id>
   void fillMCTrackHistograms(const TrackCandidatesMC::iterator& track, const bool doMakeHistograms)
   {
@@ -927,11 +969,11 @@ struct QaEfficiency {
         return;
       }
     }
-
     constexpr int histogramIndex = id + pdgSign * nSpecies;
     LOG(debug) << "fillMCTrackHistograms for pdgSign '" << pdgSign << "' and id '" << static_cast<int>(id) << "' " << particleName(pdgSign, id) << " with index " << histogramIndex;
     const o2::aod::McParticles::iterator& mcParticle = track.mcParticle();
     const CollisionCandidatesMC::iterator& collision = track.collision_as<CollisionCandidatesMC>();
+    float radius = std::sqrt(mcParticle.vx() * mcParticle.vx() + mcParticle.vy() * mcParticle.vy());
     if (numSameCollision) {
       if (!collision.has_mcCollision()) {
         return;
@@ -971,6 +1013,12 @@ struct QaEfficiency {
         hPtEtaTrkItsTpc[histogramIndex]->Fill(track.pt(), track.eta());
         if (passedTOF) {
           hPtEtaItsTpcTof[histogramIndex]->Fill(mcParticle.pt(), mcParticle.eta());
+        }
+      }
+      if (doPtRadius) {
+        hPtRadiusItsTpc[histogramIndex]->Fill(mcParticle.pt(), radius);
+        if (passedTOF) {
+          hPtRadiusItsTpcTof[histogramIndex]->Fill(mcParticle.pt(), radius);
         }
       }
     }
@@ -1036,6 +1084,15 @@ struct QaEfficiency {
           hPtItsTpcTofStr[histogramIndex]->Fill(mcParticle.pt());
         }
       }
+      if (isFinal(mcParticle)) {
+        if (passedITS && passedTPC && motherIsAccepted) {
+          hPtItsTpcTer[histogramIndex]->Fill(mcParticle.pt());
+          hPtTrkItsTpcTer[histogramIndex]->Fill(track.pt());
+          if (passedTOF) {
+            hPtItsTpcTofTer[histogramIndex]->Fill(mcParticle.pt());
+          }
+        }
+      }
     } else { // Material
       if (passedITS && passedTPC) {
         hPtItsTpcMat[histogramIndex]->Fill(mcParticle.pt());
@@ -1067,6 +1124,7 @@ struct QaEfficiency {
 
     constexpr int histogramIndex = id + pdgSign * nSpecies;
     LOG(debug) << "fillMCParticleHistograms for pdgSign '" << pdgSign << "' and id '" << static_cast<int>(id) << "' " << particleName(pdgSign, id) << " with index " << histogramIndex;
+    float radius = std::sqrt(mcParticle.vx() * mcParticle.vx() + mcParticle.vy() * mcParticle.vy());
     if (!isPdgSelected<pdgSign, id>(mcParticle)) { // Selecting PDG code
       return;
     }
@@ -1107,17 +1165,22 @@ struct QaEfficiency {
         }
         if (motherIsAccepted) {
           hPtGeneratedStr[histogramIndex]->Fill(mcParticle.pt());
+          if (isFinal(mcParticle)) {
+            hPtGeneratedTer[histogramIndex]->Fill(mcParticle.pt());
+          }
         }
       } else { // Material
         hPtGeneratedMat[histogramIndex]->Fill(mcParticle.pt());
       }
     }
-
     hEtaGenerated[histogramIndex]->Fill(mcParticle.eta());
     hYGenerated[histogramIndex]->Fill(mcParticle.y());
     hPhiGenerated[histogramIndex]->Fill(mcParticle.phi());
     if (doPtEta) {
       hPtEtaGenerated[histogramIndex]->Fill(mcParticle.pt(), mcParticle.eta());
+    }
+    if (doPtRadius) {
+      hPtRadiusGenerated[histogramIndex]->Fill(mcParticle.pt(), radius);
     }
   }
 
@@ -1191,6 +1254,10 @@ struct QaEfficiency {
     doFillEfficiency("ITS-TPC_vsPt_Mat_Trk", hPtTrkItsTpcMat[histogramIndex], hPtGeneratedMat[histogramIndex]);
     doFillEfficiency("ITS-TPC-TOF_vsPt_Mat", hPtItsTpcTofMat[histogramIndex], hPtGeneratedMat[histogramIndex]);
 
+    doFillEfficiency("ITS-TPC_vsPt_Ter", hPtItsTpcTer[histogramIndex], hPtGeneratedTer[histogramIndex]);
+    doFillEfficiency("ITS-TPC_vsPt_Ter_Trk", hPtTrkItsTpcTer[histogramIndex], hPtGeneratedTer[histogramIndex]);
+    doFillEfficiency("ITS-TPC-TOF_vsPt_Ter", hPtItsTpcTofTer[histogramIndex], hPtGeneratedTer[histogramIndex]);
+
     doFillEfficiency("ITS-TPC_vsP", hPItsTpc[histogramIndex], hPGenerated[histogramIndex]);
     doFillEfficiency("ITS-TPC_vsP_Trk", hPTrkItsTpc[histogramIndex], hPGenerated[histogramIndex]);
     doFillEfficiency("ITS-TPC-TOF_vsP", hPItsTpcTof[histogramIndex], hPGenerated[histogramIndex]);
@@ -1231,8 +1298,12 @@ struct QaEfficiency {
     fillEfficiency2D("ITS-TPC_vsPt_vsEta", hPtEtaItsTpc[histogramIndex], hPtEtaGenerated[histogramIndex]);
     fillEfficiency2D("ITS-TPC_vsPt_vsEta_Trk", hPtEtaTrkItsTpc[histogramIndex], hPtEtaGenerated[histogramIndex]);
     fillEfficiency2D("ITS-TPC-TOF_vsPt_vsEta", hPtEtaItsTpcTof[histogramIndex], hPtEtaGenerated[histogramIndex]);
+    if (!doPtRadius) {
+      return;
+    }
+    fillEfficiency2D("ITS-TPC_vsPt_vsRadius", hPtRadiusItsTpc[histogramIndex], hPtRadiusGenerated[histogramIndex]);
+    fillEfficiency2D("ITS-TPC-TOF_vsPt_vsRadius", hPtRadiusItsTpcTof[histogramIndex], hPtRadiusGenerated[histogramIndex]);
   }
-
   template <bool doFillHistograms, typename CollType>
   bool isCollisionSelected(const CollType& collision)
   {
