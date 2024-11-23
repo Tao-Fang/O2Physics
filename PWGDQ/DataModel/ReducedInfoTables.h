@@ -110,18 +110,11 @@ DECLARE_SOA_COLUMN(M11REF, m11ref, float);     //!  Weighted multiplicity of <<2
 DECLARE_SOA_COLUMN(M1111REF, m1111ref, float); //!  Weighted multiplicity of <<4>> for reference flow
 } // namespace reducedevent
 
-DECLARE_SOA_TABLE(ReducedEvents, "AOD", "REDUCEDEVENT", //!   Main event information table
-                  o2::soa::Index<>,
-                  reducedevent::Tag, bc::RunNumber,
-                  collision::PosX, collision::PosY, collision::PosZ, collision::NumContrib,
-                  collision::CollisionTime, collision::CollisionTimeRes);
-
-DECLARE_SOA_TABLE(StoredReducedEvents, "AOD1", "REDUCEDEVENT", //!   Main event information table
-                  o2::soa::Index<>,
-                  reducedevent::Tag, bc::RunNumber,
-                  collision::PosX, collision::PosY, collision::PosZ, collision::NumContrib,
-                  collision::CollisionTime, collision::CollisionTimeRes,
-                  o2::soa::Marker<1>);
+DECLARE_SOA_TABLE_STAGED(ReducedEvents, "REDUCEDEVENT", //!   Main event information table
+                         o2::soa::Index<>,
+                         reducedevent::Tag, bc::RunNumber,
+                         collision::PosX, collision::PosY, collision::PosZ, collision::NumContrib,
+                         collision::CollisionTime, collision::CollisionTimeRes);
 
 DECLARE_SOA_TABLE(ReducedEventsExtended, "AOD", "REEXTENDED", //!  Extended event information
                   bc::GlobalBC, evsel::Alias, evsel::Selection, timestamp::Timestamp, cent::CentRun2V0M,
@@ -405,6 +398,9 @@ DECLARE_SOA_COLUMN(FwdDcaX, fwdDcaX, float);                                    
 DECLARE_SOA_COLUMN(FwdDcaY, fwdDcaY, float);                                              //!
 DECLARE_SOA_COLUMN(MftClusterSizesAndTrackFlags, mftClusterSizesAndTrackFlags, uint64_t); //!
 DECLARE_SOA_COLUMN(MftNClusters, mftNClusters, int);                                      //!
+DECLARE_SOA_INDEX_COLUMN(ReducedMCTrack, reducedMCTrack);                                 //!
+DECLARE_SOA_COLUMN(McMask, mcMask, uint16_t);                                             //!
+DECLARE_SOA_COLUMN(McReducedFlags, mcReducedFlags, uint16_t);                             //!
 } // namespace reducedmft
 
 // MFT track kinematics
@@ -417,8 +413,13 @@ DECLARE_SOA_TABLE(ReducedMFTsExtra, "AOD", "RMFTEXTRA", //!
                   reducedmft::MftClusterSizesAndTrackFlags, reducedmft::Sign,
                   reducedmft::FwdDcaX, reducedmft::FwdDcaY, reducedmft::MftNClusters);
 
+DECLARE_SOA_TABLE(ReducedMFTLabels, "AOD", "RTMFTLABELS", //!
+                  reducedmft::ReducedMCTrackId, reducedmft::McMask, reducedmft::McReducedFlags);
+
 // iterator
 using ReducedMFT = ReducedMFTs::iterator;
+using ReducedMFTExtra = ReducedMFTsExtra::iterator;
+using ReducedMFTLabel = ReducedMFTLabels::iterator;
 
 // muon quantities
 namespace reducedmuon
@@ -699,28 +700,16 @@ DECLARE_SOA_DYNAMIC_COLUMN(Y, y, //!
                            [](float pt, float eta, float m) -> float { return std::log((std::sqrt(m * m + pt * pt * std::cosh(eta) * std::cosh(eta)) + pt * std::sinh(eta)) / std::sqrt(m * m + pt * pt)); });
 } // namespace reducedpair
 
-DECLARE_SOA_TABLE(Dielectrons, "AOD", "RTDIELECTRON", //!
-                  o2::soa::Index<>, reducedpair::ReducedEventId,
-                  reducedpair::Mass, reducedpair::Pt, reducedpair::Eta, reducedpair::Phi, reducedpair::Sign,
-                  reducedpair::FilterMap, reducedpair::McDecision,
-                  reducedpair::Rap<reducedpair::Pt, reducedpair::Eta, reducedpair::Mass>,
-                  reducedpair::Y<reducedpair::Pt, reducedpair::Eta, reducedpair::Mass>,
-                  reducedpair::Px<reducedpair::Pt, reducedpair::Phi>,
-                  reducedpair::Py<reducedpair::Pt, reducedpair::Phi>,
-                  reducedpair::Pz<reducedpair::Pt, reducedpair::Eta>,
-                  reducedpair::P<reducedpair::Pt, reducedpair::Eta>);
-
-DECLARE_SOA_TABLE(StoredDielectrons, "AOD1", "RTDIELECTRON", //!
-                  o2::soa::Index<>, reducedpair::ReducedEventId,
-                  reducedpair::Mass, reducedpair::Pt, reducedpair::Eta, reducedpair::Phi, reducedpair::Sign,
-                  reducedpair::FilterMap, reducedpair::McDecision,
-                  reducedpair::Rap<reducedpair::Pt, reducedpair::Eta, reducedpair::Mass>,
-                  reducedpair::Y<reducedpair::Pt, reducedpair::Eta, reducedpair::Mass>,
-                  reducedpair::Px<reducedpair::Pt, reducedpair::Phi>,
-                  reducedpair::Py<reducedpair::Pt, reducedpair::Phi>,
-                  reducedpair::Pz<reducedpair::Pt, reducedpair::Eta>,
-                  reducedpair::P<reducedpair::Pt, reducedpair::Eta>,
-                  o2::soa::Marker<1>);
+DECLARE_SOA_TABLE_STAGED(Dielectrons, "RTDIELECTRON", //!
+                         o2::soa::Index<>, reducedpair::ReducedEventId,
+                         reducedpair::Mass, reducedpair::Pt, reducedpair::Eta, reducedpair::Phi, reducedpair::Sign,
+                         reducedpair::FilterMap, reducedpair::McDecision,
+                         reducedpair::Rap<reducedpair::Pt, reducedpair::Eta, reducedpair::Mass>,
+                         reducedpair::Y<reducedpair::Pt, reducedpair::Eta, reducedpair::Mass>,
+                         reducedpair::Px<reducedpair::Pt, reducedpair::Phi>,
+                         reducedpair::Py<reducedpair::Pt, reducedpair::Phi>,
+                         reducedpair::Pz<reducedpair::Pt, reducedpair::Eta>,
+                         reducedpair::P<reducedpair::Pt, reducedpair::Eta>);
 
 DECLARE_SOA_TABLE(Dimuons, "AOD", "RTDIMUON", //!
                   o2::soa::Index<>, reducedpair::ReducedEventId,
@@ -852,17 +841,18 @@ DECLARE_SOA_TABLE(DitracksExtra, "AOD", "RTDITRKEXTRA", //!
 // mft PID reduced data model
 namespace fwdpid
 {
-DECLARE_SOA_COLUMN(Pt, pt, float);   //!
-DECLARE_SOA_COLUMN(Eta, eta, float); //!
-DECLARE_SOA_COLUMN(Phi, phi, float); //!
-DECLARE_SOA_COLUMN(Sign, sign, int); //!
+DECLARE_SOA_COLUMN(Pt, pt, float);                    //!
+DECLARE_SOA_COLUMN(Eta, eta, float);                  //!
+DECLARE_SOA_COLUMN(Phi, phi, float);                  //!
+DECLARE_SOA_COLUMN(Sign, sign, int);                  //!
+DECLARE_SOA_COLUMN(McDecision, mcDecision, uint32_t); //!
 } // namespace fwdpid
 
 DECLARE_SOA_TABLE(FwdPidsAll, "AOD", "RTFWDPIDALL", //!
                   fwdtrack::TrackType, collision::PosX, collision::PosY, collision::PosZ, collision::NumContrib,
                   fwdpid::Pt, fwdpid::Eta, fwdpid::Phi, fwdpid::Sign,
                   reducedmft::MftClusterSizesAndTrackFlags,
-                  reducedmft::FwdDcaX, reducedmft::FwdDcaY, fwdtrack::Chi2MatchMCHMID, fwdtrack::Chi2MatchMCHMFT);
+                  reducedmft::FwdDcaX, reducedmft::FwdDcaY, fwdtrack::Chi2MatchMCHMID, fwdtrack::Chi2MatchMCHMFT, fwdpid::McDecision);
 
 using FwdPidAll = FwdPidsAll::iterator;
 
@@ -1088,6 +1078,30 @@ DECLARE_SOA_TABLE(ReducedMuonsDca, "AOD", "RTMUONDCA",
                   muondca::Pz);
 
 using ReducedMuonDca = ReducedMuonsDca::iterator;
+
+//______________________________________________________
+namespace generatedquarkoniamc
+{
+//______________________________________________________
+// Binned content for generated particles: derived data
+DECLARE_SOA_COLUMN(GeneratedEtaC1S, generatedEtaC1S, std::vector<uint32_t>); //! Eta(1S) binned generated data
+DECLARE_SOA_COLUMN(GeneratedJPsi, generatedJPsi, std::vector<uint32_t>);     //! J/Psi binned generated data
+DECLARE_SOA_COLUMN(GeneratedChiC0, generatedChiC0, std::vector<uint32_t>);   //! ChiC0(1P) binned generated data
+DECLARE_SOA_COLUMN(GeneratedChiC1, generatedChiC1, std::vector<uint32_t>);   //! ChiC1(1P) binned generated data
+DECLARE_SOA_COLUMN(GeneratedHC, generatedHC, std::vector<uint32_t>);         //! hC binned generated data
+DECLARE_SOA_COLUMN(GeneratedChiC2, generatedChiC2, std::vector<uint32_t>);   //! ChiC2(1P) binned generated data
+DECLARE_SOA_COLUMN(GeneratedEtaC2S, generatedEtaC2S, std::vector<uint32_t>); //! EtaC(2S) binned generated data
+DECLARE_SOA_COLUMN(GeneratedPsi2S, generatedPsi2S, std::vector<uint32_t>);   //! Psi(2S) binned generated data
+} // namespace generatedquarkoniamc
+
+DECLARE_SOA_TABLE(GeEtaC1S, "AOD", "GEETAC1S", generatedquarkoniamc::GeneratedEtaC1S);
+DECLARE_SOA_TABLE(GeJPsi, "AOD", "GEJPSI", generatedquarkoniamc::GeneratedJPsi);
+DECLARE_SOA_TABLE(GeChiC0, "AOD", "GECHIC0", generatedquarkoniamc::GeneratedChiC0);
+DECLARE_SOA_TABLE(GeChiC1, "AOD", "GECHIC1", generatedquarkoniamc::GeneratedChiC1);
+DECLARE_SOA_TABLE(GeHC, "AOD", "GEHC", generatedquarkoniamc::GeneratedHC);
+DECLARE_SOA_TABLE(GeChiC2, "AOD", "GECHIC2", generatedquarkoniamc::GeneratedChiC2);
+DECLARE_SOA_TABLE(GeEtaC2S, "AOD", "GEETAC2S", generatedquarkoniamc::GeneratedEtaC2S);
+DECLARE_SOA_TABLE(GePsi2S, "AOD", "GEPSI2S", generatedquarkoniamc::GeneratedPsi2S);
 } // namespace o2::aod
 
 #endif // PWGDQ_DATAMODEL_REDUCEDINFOTABLES_H_
