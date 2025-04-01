@@ -185,7 +185,7 @@ namespace collInf
 {
 DECLARE_SOA_INDEX_COLUMN_CUSTOM(HfToXiPiEv, hfEvBase, "HfXic0CollBase");
 }
-}
+} // namespace full
 
 DECLARE_SOA_TABLE(HfToXiPiEvBase, "AOD", "HFTOXIPIEVBASE",
                   full::collInf::HfToXiPiEvId);
