@@ -124,15 +124,20 @@ struct HfTaskXic0ToXiPi {
     const AxisSpec thnAxisGenPtD{thnConfigAxisGenPtD, "#it{p}_{T} (GeV/#it{c})"};
     const AxisSpec thnAxisGenPtB{thnConfigAxisGenPtB, "#it{p}_{T}^{B} (GeV/#it{c})"};
     const AxisSpec thnAxisNumPvContr{thnConfigAxisNumPvContr, "Number of PV contributors"};
+    const AxisSpec thnAxisCentMc{thnConfigAxisCent, "Centrality percentile (from gen. MC info)"};
 
     if (doprocessMcWithKFParticle || doprocessMcWithKFParticleMl || doprocessMcWithDCAFitter || doprocessMcWithDCAFitterMl) {
-      std::vector<AxisSpec> const axesAcc = {thnAxisGenPtD, thnAxisGenPtB, thnAxisY, thnAxisOrigin, thnAxisNumPvContr};
+      std::vector<AxisSpec> const axesAcc = {thnAxisGenPtD, thnAxisGenPtB, thnAxisY, thnAxisOrigin, thnConfigAxisCent, thnAxisNumPvContr};
       registry.add("hSparseAcc", "Thn for generated Xic0 from charm and beauty", HistType::kTHnSparseD, axesAcc);
       registry.get<THnSparse>(HIST("hSparseAcc"))->Sumw2();
+
+      registry.add("hSparseAccWithRecoColl", "Gen. Xic0 from charm and beauty (associated to a reco collision)", HistType::kTHnSparseD, axesAcc);
+      registry.add("hNumRecoCollPerMcColl", "Number of reco collisions associated to a mc collision;Num. reco. coll. per Mc coll.;", {HistType::kTH1D, {{10, -0.5, 9.5}}});
+      registry.get<THnSparse>(HIST("hSparseAccWithRecoColl"))->Sumw2();
     }
 
     std::vector<AxisSpec> axes = {thnAxisMass, thnAxisPt, thnAxisY};
-    if (doprocessMcWithKFParticle || doprocessMcWithKFParticleMl) {
+    if (doprocessMcWithKFParticle || doprocessMcWithKFParticleMl || doprocessMcWithDCAFitter || doprocessMcWithDCAFitterMl) {
       axes.push_back(thnAxisPtB);
       axes.push_back(thnAxisOrigin);
       axes.push_back(thnAxisMatchFlag);
@@ -257,6 +262,7 @@ struct HfTaskXic0ToXiPi {
 
       auto ptGen = particle.pt();
       auto yGen = particle.rapidityCharmBaryonGen();
+      auto mcCollisions = particle.template mcCollision_as<aod::McCollisions>();
 
       unsigned maxNumContrib = 0;
       const auto& recoCollsPerMcColl = collisions.sliceBy(colPerMcCollision, particle.mcCollision().globalIndex());
@@ -264,12 +270,15 @@ struct HfTaskXic0ToXiPi {
         maxNumContrib = recCol.numContrib() > maxNumContrib ? recCol.numContrib() : maxNumContrib;
       }
 
+      float const mcCent = o2::hf_centrality::getCentralityColl(mcCollisions);
+
       if (particle.originMcGen() == RecoDecay::OriginType::Prompt) {
         registry.fill(HIST("hSparseAcc"),
                       ptGen,
                       -1.,
                       yGen,
                       RecoDecay::OriginType::Prompt,
+                      mcCent,
                       maxNumContrib);
       } else {
         float const ptGenB = mcParticles.rawIteratorAt(particle.idxBhadMotherPart()).pt();
@@ -278,7 +287,32 @@ struct HfTaskXic0ToXiPi {
                       ptGenB,
                       yGen,
                       RecoDecay::OriginType::NonPrompt,
+                      mcCent,
                       maxNumContrib);
+      }
+
+      registry.fill(HIST("hNumRecoCollPerMcColl"), recoCollsPerMcColl.size());
+      
+      // fill sparse only for gen particles associated to a reconstructed collision
+      if (recoCollsPerMcColl.size() >= 1) {
+        if (particle.originMcGen() == RecoDecay::OriginType::Prompt) {
+          registry.fill(HIST("hSparseAccWithRecoColl"),
+                        ptGen,
+                        -1.,
+                        yGen,
+                        RecoDecay::OriginType::Prompt,
+                        mcCent,
+                        maxNumContrib);
+        } else {
+          float const ptGenB = mcParticles.rawIteratorAt(particle.idxBhadMotherPart()).pt();
+          registry.fill(HIST("hSparseAccWithRecoColl"), 
+                        ptGen, 
+                        ptGenB, 
+                        yGen, 
+                        RecoDecay::OriginType::NonPrompt, 
+                        mcCent, 
+                        maxNumContrib);
+        }
       }
     }
   }
